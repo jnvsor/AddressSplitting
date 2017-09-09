@@ -403,18 +403,102 @@ class AddressSplitterTest extends \PHPUnit_Framework_TestCase
                     'additionToAddress2' => 'WG2'
                 )
             ),
+        );
+    }
+
+    /**
+     * @dataProvider ambiguousAddressesProvider
+     */
+    public function testAmbiguousAddress($address, $formatHint, $expected, $expectNS, $expectSN)
+    {
+        // var_dump($address, $formatHint, AddressSplitter::splitAddress($address, $formatHint));
+
+        $this->assertSame($expected, AddressSplitter::splitAddress($address, $formatHint));
+
+        $thrown = false;
+
+        try {
+            AddressSplitter::splitAddress($address, false);
+        } catch (E $e) {
+            $thrown = true;
+
+            $this->assertSame($address, $e->getAddress());
+            $this->assertSame($expectNS, $e->getNumberStreet());
+            $this->assertSame($expectSN, $e->getStreetNumber());
+        }
+
+        $this->assertTrue($thrown);
+    }
+
+    /**
+     * @return array
+     */
+    public function ambiguousAddressesProvider()
+    {
+        $number_street = array(
+            'additionToAddress1' => '',
+            'streetName'         => 'Loosterweg',
+            'houseNumber'        => '1e',
+            'houseNumberParts'   => array(
+                'base' => '1',
+                'extension' => 'e'
+            ),
+            'additionToAddress2' => '14'
+        );
+
+        $street_number = array(
+            'additionToAddress1' => '',
+            'streetName'         => '1e Loosterweg',
+            'houseNumber'        => '14',
+            'houseNumberParts'   => array(
+                'base' => '14',
+                'extension' => ''
+            ),
+            'additionToAddress2' => ''
+        );
+
+        return array(
             array(
                 '1e Loosterweg 14',
-                array(
-                    'additionToAddress1' => '',
-                    'streetName'         => '1e Loosterweg',
-                    'houseNumber'        => '14',
-                    'houseNumberParts'   => array(
-                        'base' => '14',
-                        'extension' => ''
-                    ),
-                    'additionToAddress2' => ''
-                )
+                'NL',
+                $street_number,
+                $number_street,
+                $street_number,
+            ),
+            array(
+                '1e Loosterweg 14',
+                'US',
+                $number_street,
+                $number_street,
+                $street_number,
+            ),
+            array(
+                '1e Loosterweg 14',
+                AddressSplitter::FORMAT_STREET_NUMBER,
+                $street_number,
+                $number_street,
+                $street_number,
+            ),
+            array(
+                '1e Loosterweg 14',
+                AddressSplitter::FORMAT_NUMBER_STREET,
+                $number_street,
+                $number_street,
+                $street_number,
+            ),
+            array(
+                '1e Loosterweg 14',
+                '528',
+                $street_number,
+                $number_street,
+                $street_number,
+            ),
+            array(
+                '1e Loosterweg 14',
+                'NLD',
+                $street_number,
+                $number_street,
+                $street_number,
             ),
         );
     }
